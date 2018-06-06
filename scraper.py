@@ -1,10 +1,12 @@
+# -*- coding: utf-8 -*-
+
 from time import sleep
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException
 from PIL import Image
 from io import BytesIO
 from collections import deque
-from urllib.parse import urlencode
+from urllib import urlencode
 from datetime import datetime
 import os
 import csv
@@ -61,25 +63,29 @@ def process_ad_divs(ad_divs, ad_count, page_count, driver, writer, dirname, ad_l
         ad = blank_ad()
         ad['ad_count'] = ad_count
         ad['page'] = page_count
-        ad['title'] = ad_div.find_element_by_xpath('.//a[text()]').text
+        ad['title'] = ad_div.find_element_by_xpath('.//a[text()]').text.encode("utf-8")
         for span in ad_div.find_elements_by_xpath('.//span[text()]'):
             if span.text.startswith('Paid for by '):
-                ad['paid_for_by'] = span.text[12:]
+                ad['paid_for_by'] = span.text[12:].encode("utf-8")
         for pos, div in enumerate(ad_div.find_elements_by_xpath('.//div[text()]')):
             if pos == 0:
                 ad['is_active'] = div.text == 'Active'
             elif pos == 1:
                 if div.text.startswith('Started running on '):
-                    ad['start'] = div.text[19:]
+                    ad['start'] = div.text[19:].encode("utf-8")
                 else:
                     split_text = div.text.split(' - ')
-                    ad['start'] = split_text[0]
-                    ad['end'] = split_text[1]
+                    ad['start'] = split_text[0].encode("utf-8")
+                    ad['end'] = split_text[1].encode("utf-8")
             elif not ('See Ad Performance' in div.text or (pos == 2 and div.text.startswith('Sponsored'))):
                 if ad['text'] is None:
-                    ad['text'] = div.text.replace('\n', ' ')
+                    ad['text'] = div.text.encode("utf-8").replace('\n', ' ')
                 else:
-                    ad['text'] = ' '.join((ad['text'], div.text.replace('\n', ' ')))
+                    text_body = ad['text'].decode("utf-8","ignore").encode('ascii', 'ignore')
+                    print text_body
+                    follow_up = div.text.encode('ascii', 'ignore').replace('\n', ' ')
+                    print follow_up
+                    ad['text'] = text_body + " "+ follow_up
         writer.writerow(ad)
         if ad_limit == ad_count:
             break
@@ -174,7 +180,7 @@ def main(q, fb_email, fb_password, ad_limit=None):
     options = webdriver.ChromeOptions()
     options.add_argument("headless")
     driver = webdriver.Chrome(options=options)
-    driver.implicitly_wait(10)
+   driver.implicitly_wait(10)
     try:
         driver.get(
             'https://www.facebook.com/politicalcontentads/?{}'.format(urlencode({'active_status': 'all', 'q': q})))
